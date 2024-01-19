@@ -53,15 +53,14 @@ def load_json(filename="./MUSIC_dataset/MUSIC_solo_videos.json"):
             video_cnt = video_cnt + 1
 
     with Progress(
-        TextColumn("[progress.description]{task.description}"),
-        BarColumn(),
-        TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
-        TimeRemainingColumn(),
-        TimeElapsedColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+            TimeRemainingColumn(),
+            TimeElapsedColumn(),
     ) as progress:
         url_proc_rich = progress.add_task(
-            description="Loading json file progress", total=video_cnt
-        )
+            description="Loading json file progress", total=video_cnt)
         for kind in kinds:
             for video in kinds[kind]:
                 raw_url = "https://youtube.com/watch?v=" + str(video)
@@ -71,6 +70,7 @@ def load_json(filename="./MUSIC_dataset/MUSIC_solo_videos.json"):
 
 
 class MUSIC_Download(object):
+
     def __init__(self, tot) -> None:
         """
         initializaton function
@@ -87,24 +87,20 @@ class MUSIC_Download(object):
         f.close()
 
         rich.print(
-            "[bold magenta]Total Video Counts (include available and unavailable videos)[/bold magenta]: {}".format(
-                self.tot
-            ),
+            "[bold magenta]Total Video Counts (include available and unavailable videos)[/bold magenta]: {}"
+            .format(self.tot),
             ":vampire:",
         )
 
         rich.print(
-            "[bold red]Remaining Counts[/bold red]: {}".format(
-                self.tot - self.idx_start
-            ),
+            "[bold red]Remaining Counts[/bold red]: {}".format(self.tot -
+                                                               self.idx_start),
             ":vampire:",
         )
 
         rich.print(
             "Start download from video with index: [red]{}[/red]".format(
-                self.idx_start + 1
-            )
-        )
+                self.idx_start + 1))
 
     def rename_hook(self, d):
         """
@@ -116,13 +112,30 @@ class MUSIC_Download(object):
             file_name = "data/{}.mp4".format(self.idx)
             os.rename(d["filename"], file_name)
             rich.print(
-                "\nDownload finished, file name is: [green]{}[/green]".format(file_name)
-            )
+                "\nDownload finished, file name is: [green]{}[/green]".format(
+                    file_name))
             with open("./idx.out", "w") as f:
                 f.write(str(self.idx))
             f.close()
 
-    def single_download(self, url=None, use_proxy=None):
+    def rename_hook_2(self, d):
+        """
+        Rename hook
+
+        :param d arr: information about downloaded video
+        """
+        video_name = d["filename"]
+        if d["status"] == "finished":
+            file_name = "data/{}.mp4".format(video_name[:-3])
+            os.rename(d["filename"], file_name)
+            rich.print(
+                "\nDownload finished, file name is: [green]{}[/green]".format(
+                    file_name))
+            with open("./idx.out", "w") as f:
+                f.write(str(self.idx))
+            f.close()
+
+    def single_download(self, url=None, use_proxy=None, rename=None):
         """
         Download youtube videos by youtube_dl
 
@@ -130,11 +143,19 @@ class MUSIC_Download(object):
         :param use_proxy bool: use proxy or not (for users in China)
         """
 
+        def check_rename():
+            rename_obj = None
+            if rename:
+                rename_obj = [self.rename_hook]
+            else:
+                rename_obj = [self.rename_hook_2]
+            return rename_obj
+
         if use_proxy:
             ydl_opts = {
                 "proxy": "http://127.0.0.1:7890",
                 "outtmpl": "%(id)s%(ext)s",
-                "progress_hooks": [self.rename_hook],
+                "progress_hooks": check_rename(),
                 "no_warnings": True,
                 "format": "best",
                 # "external_downloader": "aria2c",
@@ -148,7 +169,8 @@ class MUSIC_Download(object):
         else:
             ydl_opts = {
                 "outtmpl": "%(id)s%(ext)s",
-                "progress_hooks": [self.rename_hook],
+                # "progress_hooks": check_rename(),
+                "progress_hooks": check_rename(),
                 "no_warnings": True,
                 "format": "best",
                 # "external_downloader": "aria2c",
@@ -161,10 +183,8 @@ class MUSIC_Download(object):
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             rich.print(
-                "Try to download video with idx: [red]{}[/red], url: [blue]{}[/blue]".format(
-                    self.idx, url
-                )
-            )
+                "Try to download video with idx: [red]{}[/red], url: [blue]{}[/blue]"
+                .format(self.idx, url))
 
             # rich.inspect(url)
             # rich.inspect(ydl_opts)
@@ -173,19 +193,21 @@ class MUSIC_Download(object):
             except Exception as e:
                 self.download_error_list.append(url)
                 self.video_failed_cnt = len(self.download_error_list)
-                rich.print(
-                    "Failed Video counts: [red]{}[/red]".format(self.video_failed_cnt)
-                )
+                rich.print("Failed Video counts: [red]{}[/red]".format(
+                    self.video_failed_cnt))
                 f = open("./errors.txt", "w")
                 for line in self.download_error_list:
                     f.write(line + "\n")
                 f.close()
-                rich.print("Download Failed, Exception: [red]{}[/red]".format(e))
+                rich.print(
+                    "Download Failed, Exception: [red]{}[/red]".format(e))
 
-    def download(self, url_list=None, use_proxy=True):
+    def download(self, url_list, use_proxy=False, rename=False):
         for single_url in url_list:
             if self.idx > self.idx_start:
-                self.single_download(url=single_url, use_proxy=use_proxy)
+                self.single_download(url=single_url,
+                                     use_proxy=use_proxy,
+                                     rename=rename)
             self.idx = self.idx + 1
 
 
