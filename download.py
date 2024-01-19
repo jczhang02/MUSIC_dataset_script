@@ -202,7 +202,7 @@ class MUSIC_Download(object):
                 rich.print(
                     "Download Failed, Exception: [red]{}[/red]".format(e))
 
-    def download(self, url_list, use_proxy=False, rename=False):
+    def download(self, url_list, use_proxy=True, rename=False):
         for single_url in url_list:
             if self.idx > self.idx_start:
                 self.single_download(url=single_url,
